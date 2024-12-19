@@ -5,7 +5,7 @@ import copy
 import dateutil
 import dateutil.parser
 
-from job_seeking_agent.crawler.markdown import MarkdownTableCrawler, MultiMarkdownTableCrawler
+from job_seeker.crawler.markdown import MarkdownTableCrawler, MultiMarkdownTableCrawler
 
 class SimplifyGitHubCrawler:
     def __init__(self, url: str, name_map: dict):
@@ -43,8 +43,7 @@ class SimplifyGitHubCrawler:
             application_link = row_data[link_index]
             if application_link == "🔒":
                 application_link = ""
-
-            html_link_res = re.search(r"href=\"(.+)\"", application_link)
+            html_link_res = re.search(r'\<a href=\"(.+?)\"\>', application_link)
             if html_link_res:
                 application_link = html_link_res.group(1)
             row_data[link_index] = application_link
@@ -97,7 +96,7 @@ class SWECollegeJobCrawler:
                 # process application link
                 link_index = header.index(self.name_map["link"])
                 application_link = row_data[link_index]
-                html_link_res = re.search(r"\<a href=\"(.+)\"\>", application_link)
+                html_link_res = re.search(r"\<a href=\"(.+?)\"\>", application_link)
                 if html_link_res:
                     application_link = html_link_res.group(1)
                 row_data[link_index] = application_link
@@ -112,6 +111,63 @@ class SWECollegeJobCrawler:
                 row_data[date_index] = post_date
 
                 yield {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
+
+
+class CanadianTechCrawler:
+    def __init__(self, url, name_map):
+        self.url = url
+        self.name_map = name_map
+
+    def __iter__(self):
+        markdown_crawler = MarkdownTableCrawler(self.url)
+        last_row_data_dict = None
+        header = None
+
+        for i, row in enumerate(markdown_crawler):
+            row_data = [col.strip().lower() for col in row.split('|')]
+
+            if i == 0:
+                header = row_data
+                print(header)
+                continue
+
+            if i == 1:
+                continue
+
+            row_data_dict = {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
+            
+            # process company name
+            company_index = header.index(self.name_map["company"])
+            company_name = row_data[company_index]
+            md_link_res = re.search(r'\[(.+)\]', company_name)
+            if md_link_res:
+                company_name = md_link_res.group(1)
+            row_data_dict["company"] = company_name
+
+            # process application link
+            link_index = header.index(self.name_map["link"])
+            application_link = row_data[link_index]
+            md_link_res = re.search(r'\((.+)\)', application_link)
+            if md_link_res:
+                application_link = md_link_res.group(1)
+            row_data_dict["link"] = application_link
+
+            # process date
+            date_index = header.index(self.name_map["date"])
+            post_date = row_data[date_index]
+            try:
+                post_date = dateutil.parser.parse(post_date)
+            except:
+                if last_row_data_dict:
+                    post_date = last_row_data_dict["date"]
+                else:
+                    post_date = None
+            row_data_dict["date"] = post_date
+
+            last_row_data_dict = row_data_dict
+
+            yield row_data_dict
+
 
 
 if __name__ == "__main__":
@@ -149,6 +205,17 @@ if __name__ == "__main__":
         }
     )
 
+    canadian_tech = CanadianTechCrawler(
+        url="https://github.com/Dannny-Babs/Canadian-Tech-Internships-2025/raw/refs/heads/main/README.md",
+        name_map={
+            "company": "name",
+            "role": "notes",
+            "location": "location",
+            "link": "name",
+            "date": "date posted"
+        }
+    )
+
     rows = []
 
     for item in summer:
@@ -163,5 +230,8 @@ if __name__ == "__main__":
         if "canada" in item["location"]:
             rows.append(item)
 
+    for item in canadian_tech:
+        rows.append(item)
+
     import pandas as pd
-    pd.DataFrame(rows).to_csv("intern.csv", index=False)
+    pd.DataFrame(rows).sort_values(["location", "company"]).to_csv("intern.csv", index=False)
