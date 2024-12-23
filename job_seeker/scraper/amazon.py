@@ -1,15 +1,12 @@
-import requests
-from bs4 import BeautifulSoup
+from job_seeker.scraper.base import RequestsScraper
 
 class AmazonScraper:
     def __init__(self, url):
         self.url = url
 
     def __call__(self):
-        with requests.get(self.url) as response:
-            soup = BeautifulSoup(response.text)
-            job_detail = soup.find(attrs={"id": "job-detail-body"})
-            return job_detail.get_text("\n")
+        scraper = RequestsScraper()
+        return scraper(self.url, {"id": "job-detail-body"})
         
 
 if __name__ == "__main__":
