@@ -1,28 +1,37 @@
 import datetime
 import re
-import copy
 
+from loguru import logger
 import dateutil
 import dateutil.parser
 
-from job_seeker.crawler.markdown import MarkdownTableCrawler, MultiMarkdownTableCrawler
+from job_seeker.crawler.base import BaseCrawler, CrawlerRegistry
+from job_seeker.crawler.markdown import extract_markdown_table, extract_markdown_multi_table
+from job_seeker.db.model import Job
+from job_seeker.utils.async_utils import async_enumerate
 
-class SimplifyGitHubCrawler:
-    def __init__(self, url: str, name_map: dict):
-        self.url = url
-        self.name_map = name_map
+class SimplifyGitHubCrawler(BaseCrawler):
+    def __init__(self):
+        self.name_map = {
+           "company": "Company",
+            "role": "Role",
+            "location": "Location",
+            "season": "Terms",
+            "link": "Application/Link",
+            "date": "Date Posted"
+        }
 
-    def __iter__(self):
-        markdown_crawler = MarkdownTableCrawler(self.url)
+    async def extract_jobs(self, link):
+        logger.info(f"Extracting jobs from {link}")
         last_row_data = None
         header = None
 
-        for i, row in enumerate(markdown_crawler):
-            row_data = [col.strip().lower() for col in row.split('|')]
+        async for i, row in async_enumerate(extract_markdown_table(link)):
+            row_data = [col.strip() for col in row.split('|')]
 
             if i == 0:
                 header = row_data
-                print(header)
+                logger.info(f"Table header: {header}")
                 continue
 
             if i == 1:
@@ -46,6 +55,11 @@ class SimplifyGitHubCrawler:
             html_link_res = re.search(r'\<a href=\"(.+?)\"\>', application_link)
             if html_link_res:
                 application_link = html_link_res.group(1)
+            if not application_link:
+                continue
+            application_link = application_link.replace("utm_source=Simplify&ref=Simplify", "")
+            if application_link.endswith("&") or application_link.endswith("?"):
+                application_link = application_link[:-1]
             row_data[link_index] = application_link
 
             # process date
@@ -64,22 +78,26 @@ class SimplifyGitHubCrawler:
             yield {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
 
 
-class SWECollegeJobCrawler:
-    def __init__(self, url: str, name_map: dict):
-        self.url = url
-        self.name_map = name_map
+class SWECollegeJobCrawler(BaseCrawler):
+    def __init__(self):
+        self.name_map = {
+            "company": "Company",
+            "role": "Position",
+            "location": "Location",
+            "link": "Posting",
+            "date": "Age"
+        }
 
-    def __iter__(self):
-        markdown_crawler = MultiMarkdownTableCrawler(self.url)
-
-        for table in markdown_crawler:
+    async def extract_jobs(self, link):
+        logger.info(f"Extracting jobs from {link}")
+        async for table in extract_markdown_multi_table(link):
             header = None
             for i, row in enumerate(table):
-                row_data = [col.strip().lower() for col in row.split('|')]
+                row_data = [col.strip() for col in row.split('|')]
 
                 if i == 0:
                     header = row_data
-                    print(header)
+                    logger.info(f"Table header: {header}")
                     continue
 
                 if i == 1:
@@ -99,6 +117,8 @@ class SWECollegeJobCrawler:
                 html_link_res = re.search(r"\<a href=\"(.+?)\"\>", application_link)
                 if html_link_res:
                     application_link = html_link_res.group(1)
+                if not application_link:
+                    continue
                 row_data[link_index] = application_link
 
                 # process date
@@ -107,28 +127,33 @@ class SWECollegeJobCrawler:
                 match_res = re.match("(\d+)d", days)
                 if match_res:
                     days = int(match_res.group(1))
-                post_date = datetime.date.today() - datetime.timedelta(days=days)
+                post_date = datetime.datetime.today() - datetime.timedelta(days=days)
                 row_data[date_index] = post_date
 
                 yield {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
 
 
-class CanadianTechCrawler:
-    def __init__(self, url, name_map):
-        self.url = url
-        self.name_map = name_map
+class CanadianTechCrawler(BaseCrawler):
+    def __init__(self):
+        self.name_map = {
+            "company": "Name",
+            "role": "Notes",
+            "location": "Location",
+            "link": "Name",
+            "date": "Date Posted"
+        }
 
-    def __iter__(self):
-        markdown_crawler = MarkdownTableCrawler(self.url)
+    async def extract_jobs(self, link):
+        logger.info(f"Extracting jobs from {link}")
         last_row_data_dict = None
         header = None
 
-        for i, row in enumerate(markdown_crawler):
-            row_data = [col.strip().lower() for col in row.split('|')]
+        async for i, row in async_enumerate(extract_markdown_table(link)):
+            row_data = [col.strip() for col in row.split('|')]
 
             if i == 0:
                 header = row_data
-                print(header)
+                logger.info(f"Table header: {header}")
                 continue
 
             if i == 1:
@@ -150,6 +175,8 @@ class CanadianTechCrawler:
             md_link_res = re.search(r'\((.+)\)', application_link)
             if md_link_res:
                 application_link = md_link_res.group(1)
+            if not application_link:
+                continue
             row_data_dict["link"] = application_link
 
             # process date
@@ -168,70 +195,7 @@ class CanadianTechCrawler:
 
             yield row_data_dict
 
+CrawlerRegistry.register("SimplifyGitHubCrawler", SimplifyGitHubCrawler)
+CrawlerRegistry.register("SWECollegeJobCrawler", SWECollegeJobCrawler)
+CrawlerRegistry.register("CanadianTechCrawler", CanadianTechCrawler)
 
-
-if __name__ == "__main__":
-    summer = SimplifyGitHubCrawler(
-        url="https://raw.githubusercontent.com/SimplifyJobs/Summer2025-Internships/refs/heads/dev/README.md",
-        name_map={
-            "company": "company",
-            "role": "role",
-            "location": "location",
-            "link": "application/link",
-            "date": "date posted"
-        }
-    )
-
-    off_season = SimplifyGitHubCrawler(
-        url="https://raw.githubusercontent.com/SimplifyJobs/Summer2025-Internships/refs/heads/dev/README-Off-Season.md",
-        name_map={
-            "company": "company",
-            "role": "role",
-            "location": "location",
-            "season": "terms",
-            "link": "application/link",
-            "date": "date posted"
-        }
-    )
-
-    intl = SWECollegeJobCrawler(
-        url="https://github.com/speedyapply/2025-SWE-College-Jobs/raw/refs/heads/main/INTERN_INTL.md",
-        name_map={
-            "company": "company",
-            "role": "position",
-            "location": "location",
-            "link": "posting",
-            "date": "age"
-        }
-    )
-
-    canadian_tech = CanadianTechCrawler(
-        url="https://github.com/Dannny-Babs/Canadian-Tech-Internships-2025/raw/refs/heads/main/README.md",
-        name_map={
-            "company": "name",
-            "role": "notes",
-            "location": "location",
-            "link": "name",
-            "date": "date posted"
-        }
-    )
-
-    rows = []
-
-    for item in summer:
-        if "canada" in item["location"]:
-            rows.append(item)
-
-    for item in off_season:
-        if "canada" in item["location"]:
-            rows.append(item)
-
-    for item in intl:
-        if "canada" in item["location"]:
-            rows.append(item)
-
-    for item in canadian_tech:
-        rows.append(item)
-
-    import pandas as pd
-    pd.DataFrame(rows).sort_values(["location", "company"]).to_csv("intern.csv", index=False)

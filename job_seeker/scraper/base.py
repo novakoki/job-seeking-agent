@@ -1,4 +1,5 @@
 import requests
+import aiohttp
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
@@ -11,13 +12,23 @@ class RequestsScraper:
             job_detail = soup.find(attrs=attrs)
 
             return str(job_detail)
+        
+class AiohttpScraper:
+    async def __call__(self, url, attrs):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                soup = BeautifulSoup(await response.text())
+                job_detail = soup.find(attrs=attrs)
+
+                return str(job_detail)
+
 
 class PlaywrightScraper(metaclass=SingletonMeta):
     def __init__(self):
         self.playwright = None
         self.browser = None
 
-    def __call__(self, url, selector):
+    def __call__(self, url, selector="body"):
         if self.browser is None:
             self.playwright = sync_playwright().start()
             chromium = self.playwright.chromium
@@ -25,6 +36,8 @@ class PlaywrightScraper(metaclass=SingletonMeta):
         page = self.browser.new_page()
         page.goto(url)
         page.wait_for_load_state()
+        if selector == "body":
+            page.wait_for_timeout(5000)
         page.wait_for_selector(selector)
         details = page.locator(selector).inner_html()
         page.close()

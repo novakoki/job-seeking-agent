@@ -1,31 +1,22 @@
-from typing import Iterable
-
 import re
+import aiohttp
 
-import requests
 
-
-class MarkdownTableCrawler(Iterable):
-    def __init__(self, url):
-        self.url = url
-
-    def __iter__(self):
-        with requests.get(self.url, stream=True) as response:
-            for line in response.iter_lines():
+async def extract_markdown_table(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            async for line in response.content:
                 result = re.match(r"\|(.+)\|", line.decode())
                 if result:
                     yield result.group(1)
 
 
-class MultiMarkdownTableCrawler(Iterable):
-    def __init__(self, url):
-        self.url = url
-
-    def __iter__(self):
-        data = []
-        valid = False
-        with requests.get(self.url, stream=True) as response:
-            for line in response.iter_lines():
+async def extract_markdown_multi_table(url):
+    data = []
+    valid = False
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            async for line in response.content:
                 result = re.match(r"\|(.+)\|", line.decode())
                 if result:
                     valid = True
