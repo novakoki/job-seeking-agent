@@ -1,8 +1,8 @@
-import os
+from typing import List
 
 from openai import AzureOpenAI
 from dotenv import load_dotenv
-from time import time
+import numpy as np
 
 load_dotenv()
 
@@ -10,18 +10,18 @@ class OpenAIEmbedding:
     def __init__(self):
         self.client = AzureOpenAI()
 
-    def __call__(self, input, save_name=None):
+    def encode(self, query: str) -> List[float]:
         response = self.client.embeddings.create(
             model="text-embedding-3-small",
-            input=input,
+            input=query,
             encoding_format="float"
         )
 
-        if save_name is None:
-            save_name = "embedding_{}.json".format(time())
+        return np.array(response.data[0].embedding)
 
-        with open(save_name, "w") as f:
-            f.write(response.to_json(indent=0))
+class OpenAIBatchEmbedding:
+    def __init__(self):
+        self.client = AzureOpenAI()
 
-        return response
-
+    def encode(self, queries: List[str]):
+        raise NotImplementedError

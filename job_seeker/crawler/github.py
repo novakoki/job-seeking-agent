@@ -1,5 +1,6 @@
 import datetime
 import re
+from typing import AsyncGenerator
 
 from loguru import logger
 import dateutil
@@ -21,7 +22,7 @@ class SimplifyGitHubCrawler(BaseCrawler):
             "date": "Date Posted"
         }
 
-    async def extract_jobs(self, link):
+    async def extract_jobs(self, link: str) -> AsyncGenerator[Job, None]:
         logger.info(f"Extracting jobs from {link}")
         last_row_data = None
         header = None
@@ -75,7 +76,13 @@ class SimplifyGitHubCrawler(BaseCrawler):
 
             last_row_data = row_data
 
-            yield {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
+            job = Job.model_validate({
+                k: row_data[header.index(v)]
+                for k, v in self.name_map.items()
+                if v in header
+            })
+
+            yield job
 
 
 class SWECollegeJobCrawler(BaseCrawler):
@@ -130,7 +137,13 @@ class SWECollegeJobCrawler(BaseCrawler):
                 post_date = datetime.datetime.today() - datetime.timedelta(days=days)
                 row_data[date_index] = post_date
 
-                yield {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
+                job = Job.model_validate({
+                    k: row_data[header.index(v)]
+                    for k, v in self.name_map.items()
+                    if v in header
+                })
+
+                yield job
 
 
 class CanadianTechCrawler(BaseCrawler):
@@ -193,7 +206,7 @@ class CanadianTechCrawler(BaseCrawler):
 
             last_row_data_dict = row_data_dict
 
-            yield row_data_dict
+            yield Job.model_validate(row_data_dict)
 
 CrawlerRegistry.register("SimplifyGitHubCrawler", SimplifyGitHubCrawler)
 CrawlerRegistry.register("SWECollegeJobCrawler", SWECollegeJobCrawler)

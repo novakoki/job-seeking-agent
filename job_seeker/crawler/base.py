@@ -12,13 +12,13 @@ class CrawlerRegistry:
     _registry = {}
 
     @classmethod
-    def register(cls, name: str, crawler: BaseCrawler):
+    def register(cls, name: str, crawler: type[BaseCrawler]):
         if name in cls._registry:
             raise ValueError(f"{name} already exists in the registry")
         cls._registry[name] = crawler
 
     @classmethod
-    def get(cls, name: str) -> BaseCrawler:
+    def get(cls, name: str) -> type[BaseCrawler]:
         if name not in cls._registry:
             raise ValueError(f"{name} not found in the registry")
         return cls._registry.get(name)
