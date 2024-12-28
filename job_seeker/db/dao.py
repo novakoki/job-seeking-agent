@@ -8,19 +8,13 @@ from job_seeker.db.mongo import job_collection, resume_collection
 class JobDAO:
     @classmethod
     async def add_one(cls, job: Job) -> Optional[Job]:
-        # use upsert as workaround due to the lack of transaction support in MongoDB
-        # use link as unique index to deduplicate jobs
-        update_result = await job_collection.update_one(
-            filter={"link": job.link},
-            update={"$set": job.model_dump()},
-            upsert=True
-        )
-
-        if update_result.upserted_id is None:
+        try:
+            insert_result = await job_collection.insert_one(
+                job.model_dump(exclude={"id"})
+            )
+            return insert_result.inserted_id
+        except:
             return None
-        else:
-            job.id = str(update_result.upserted_id)
-            return job
 
     @classmethod
     async def update_desc(cls, job_id: str, description: str):

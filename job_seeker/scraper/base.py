@@ -1,6 +1,6 @@
 import requests
 import aiohttp
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
 from job_seeker.utils.singleton import SingletonMeta
@@ -23,29 +23,29 @@ class AiohttpScraper:
                 return str(job_detail)
 
 
-class PlaywrightScraper(metaclass=SingletonMeta):
+class PlaywrightScraper:
     def __init__(self):
         self.playwright = None
         self.browser = None
 
-    def __call__(self, url, selector="body"):
-        if self.browser is None:
-            self.playwright = sync_playwright().start()
-            chromium = self.playwright.chromium
-            self.browser = chromium.launch(headless=True)
-        page = self.browser.new_page()
-        page.goto(url)
-        page.wait_for_load_state()
+    async def init(self):
+        self.playwright = await async_playwright().start()
+        chromium = self.playwright.chromium
+        self.browser = await chromium.launch(headless=True)
+
+    async def extract_page(self, url, selector="body") -> str:
+        page = await self.browser.new_page()
+        await page.goto(url)
+        await page.wait_for_load_state()
         if selector == "body":
-            page.wait_for_timeout(5000)
-        page.wait_for_selector(selector)
-        details = page.locator(selector).inner_html()
-        page.close()
+            await page.wait_for_timeout(5000)
+        await page.wait_for_selector(selector)
+        details = await page.locator(selector).inner_html()
+        # TODO: clean html
+        await page.close()
         return details
 
-    def __del__(self):
+    async def close(self):
         if self.browser is not None:
             self.browser.close()
             self.playwright.stop()
-
-play_wright_scraper = PlaywrightScraper()
