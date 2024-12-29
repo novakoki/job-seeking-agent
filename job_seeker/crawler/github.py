@@ -7,19 +7,23 @@ import dateutil
 import dateutil.parser
 
 from job_seeker.crawler.base import BaseCrawler, CrawlerRegistry
-from job_seeker.crawler.markdown import extract_markdown_table, extract_markdown_multi_table
+from job_seeker.crawler.markdown import (
+    extract_markdown_table,
+    extract_markdown_multi_table,
+)
 from job_seeker.db.model import Job
 from job_seeker.utils.async_utils import async_enumerate
+
 
 class SimplifyGitHubCrawler(BaseCrawler):
     def __init__(self):
         self.name_map = {
-           "company": "Company",
+            "company": "Company",
             "role": "Role",
             "location": "Location",
             "season": "Terms",
             "link": "Application/Link",
-            "date": "Date Posted"
+            "date": "Date Posted",
         }
 
     async def extract_jobs(self, link: str) -> AsyncGenerator[Job, None]:
@@ -28,7 +32,7 @@ class SimplifyGitHubCrawler(BaseCrawler):
         header = None
 
         async for i, row in async_enumerate(extract_markdown_table(link)):
-            row_data = [col.strip() for col in row.split('|')]
+            row_data = [col.strip() for col in row.split("|")]
 
             if i == 0:
                 header = row_data
@@ -37,13 +41,13 @@ class SimplifyGitHubCrawler(BaseCrawler):
 
             if i == 1:
                 continue
-            
+
             # process company name
             company_index = header.index(self.name_map["company"])
             company_name = row_data[company_index]
             if company_name == "↳":
                 company_name = last_row_data[company_index]
-            md_link_res = re.search(r'\[(.+)\]', company_name)
+            md_link_res = re.search(r"\[(.+)\]", company_name)
             if md_link_res:
                 company_name = md_link_res.group(1)
             row_data[company_index] = company_name
@@ -53,12 +57,14 @@ class SimplifyGitHubCrawler(BaseCrawler):
             application_link = row_data[link_index]
             if application_link == "🔒":
                 application_link = ""
-            html_link_res = re.search(r'\<a href=\"(.+?)\"\>', application_link)
+            html_link_res = re.search(r"\<a href=\"(.+?)\"\>", application_link)
             if html_link_res:
                 application_link = html_link_res.group(1)
             if not application_link:
                 continue
-            application_link = application_link.replace("utm_source=Simplify&ref=Simplify", "")
+            application_link = application_link.replace(
+                "utm_source=Simplify&ref=Simplify", ""
+            )
             if application_link.endswith("&") or application_link.endswith("?"):
                 application_link = application_link[:-1]
             row_data[link_index] = application_link
@@ -67,20 +73,23 @@ class SimplifyGitHubCrawler(BaseCrawler):
             date_index = header.index(self.name_map["date"])
             post_date = row_data[date_index]
             post_date = dateutil.parser.parse(post_date)
-            if (last_row_data is not None
+            if (
+                last_row_data is not None
                 and application_link == last_row_data[link_index]
                 and post_date > last_row_data[date_index]
             ):
-                post_date = post_date.replace(year=post_date.year-1)
+                post_date = post_date.replace(year=post_date.year - 1)
             row_data[date_index] = post_date
 
             last_row_data = row_data
 
-            job = Job.model_validate({
-                k: row_data[header.index(v)]
-                for k, v in self.name_map.items()
-                if v in header
-            })
+            job = Job.model_validate(
+                {
+                    k: row_data[header.index(v)]
+                    for k, v in self.name_map.items()
+                    if v in header
+                }
+            )
 
             yield job
 
@@ -92,7 +101,7 @@ class SWECollegeJobCrawler(BaseCrawler):
             "role": "Position",
             "location": "Location",
             "link": "Posting",
-            "date": "Age"
+            "date": "Age",
         }
 
     async def extract_jobs(self, link):
@@ -100,7 +109,7 @@ class SWECollegeJobCrawler(BaseCrawler):
         async for table in extract_markdown_multi_table(link):
             header = None
             for i, row in enumerate(table):
-                row_data = [col.strip() for col in row.split('|')]
+                row_data = [col.strip() for col in row.split("|")]
 
                 if i == 0:
                     header = row_data
@@ -110,7 +119,7 @@ class SWECollegeJobCrawler(BaseCrawler):
                 if i == 1:
                     continue
 
-                 # process company name
+                # process company name
                 company_index = header.index(self.name_map["company"])
                 company_name = row_data[company_index]
                 html_link_res = re.search(r"\<strong\>(.+)\<\/strong\>", company_name)
@@ -137,11 +146,13 @@ class SWECollegeJobCrawler(BaseCrawler):
                 post_date = datetime.datetime.today() - datetime.timedelta(days=days)
                 row_data[date_index] = post_date
 
-                job = Job.model_validate({
-                    k: row_data[header.index(v)]
-                    for k, v in self.name_map.items()
-                    if v in header
-                })
+                job = Job.model_validate(
+                    {
+                        k: row_data[header.index(v)]
+                        for k, v in self.name_map.items()
+                        if v in header
+                    }
+                )
 
                 yield job
 
@@ -153,7 +164,7 @@ class CanadianTechCrawler(BaseCrawler):
             "role": "Notes",
             "location": "Location",
             "link": "Name",
-            "date": "Date Posted"
+            "date": "Date Posted",
         }
 
     async def extract_jobs(self, link):
@@ -162,7 +173,7 @@ class CanadianTechCrawler(BaseCrawler):
         header = None
 
         async for i, row in async_enumerate(extract_markdown_table(link)):
-            row_data = [col.strip() for col in row.split('|')]
+            row_data = [col.strip() for col in row.split("|")]
 
             if i == 0:
                 header = row_data
@@ -172,12 +183,16 @@ class CanadianTechCrawler(BaseCrawler):
             if i == 1:
                 continue
 
-            row_data_dict = {k: row_data[header.index(v)] for k, v in self.name_map.items() if v in header}
-            
+            row_data_dict = {
+                k: row_data[header.index(v)]
+                for k, v in self.name_map.items()
+                if v in header
+            }
+
             # process company name
             company_index = header.index(self.name_map["company"])
             company_name = row_data[company_index]
-            md_link_res = re.search(r'\[(.+)\]', company_name)
+            md_link_res = re.search(r"\[(.+)\]", company_name)
             if md_link_res:
                 company_name = md_link_res.group(1)
             row_data_dict["company"] = company_name
@@ -185,7 +200,7 @@ class CanadianTechCrawler(BaseCrawler):
             # process application link
             link_index = header.index(self.name_map["link"])
             application_link = row_data[link_index]
-            md_link_res = re.search(r'\((.+)\)', application_link)
+            md_link_res = re.search(r"\((.+)\)", application_link)
             if md_link_res:
                 application_link = md_link_res.group(1)
             if not application_link:
@@ -208,7 +223,7 @@ class CanadianTechCrawler(BaseCrawler):
 
             yield Job.model_validate(row_data_dict)
 
+
 CrawlerRegistry.register("SimplifyGitHubCrawler", SimplifyGitHubCrawler)
 CrawlerRegistry.register("SWECollegeJobCrawler", SWECollegeJobCrawler)
 CrawlerRegistry.register("CanadianTechCrawler", CanadianTechCrawler)
-

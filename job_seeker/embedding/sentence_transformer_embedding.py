@@ -2,15 +2,12 @@ from sentence_transformers import SentenceTransformer
 import torch
 import numpy as np
 
+from job_seeker.embedding.base import BaseEncoder
 
-class SentenceTransformerEmbedding:
+
+class SentenceTransformerEncoder(BaseEncoder):
     def __init__(self, model_name: str, model_kwargs: dict = None):
-        if model_kwargs is None:
-            model_kwargs = {
-                "trust_remote_code": True,
-                "torch_dtype": "float16"
-            }
-        self.model = SentenceTransformer(model_name, model_kwargs=model_kwargs)
+        self.model = SentenceTransformer(model_name, **model_kwargs)
 
     def encode(self, query: str) -> np.ndarray:
         torch.cuda.empty_cache()

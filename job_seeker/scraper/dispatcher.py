@@ -1,33 +1,30 @@
 import asyncio
-import time
-import os
-
-from dotenv import load_dotenv
-from loguru import logger
+import json
 
 from job_seeker.db.dao import JobDAO
-from job_seeker.scraper.base import PlaywrightScraper
+from job_seeker.db.rabbitmq import publish
 
-load_dotenv()
 
-class ScraperDispatcher:
-    def __init__(self):
-        self.scraper = PlaywrightScraper()
-
-    async def listen(self):
+class LocalPlaywrightScraperDispatcher:
+    async def dispatch(self):
         async for change in JobDAO.watch():
             if change["operationType"] == "insert":
-                await self.execute(change["fullDocument"]["_id"], change["fullDocument"]["link"])
-            # print(change)
-
-    async def execute(self, job_id, url):
-        content = await self.scraper.extract_page(url)
-
-        await JobDAO.update_desc(job_id, content)
+                job_id = str(change["fullDocument"]["_id"])
+                url = change["fullDocument"]["link"]
+                await publish(
+                    "PlaywrightScraper", json.dumps({"job_id": job_id, "link": url})
+                )
 
 
 if __name__ == "__main__":
-    dispatcher = ScraperDispatcher()
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(dispatcher.listen())
-    loop.close()
+
+    async def main():
+        from job_seeker.scraper.worker import LocalPlaywrightScraperWorker
+
+        worker = LocalPlaywrightScraperWorker()
+        worker_task = asyncio.create_task(worker.serve())
+        dispatcher = LocalPlaywrightScraperDispatcher()
+        await dispatcher.dispatch()
+        worker_task.cancel()
+
+    asyncio.run(main())

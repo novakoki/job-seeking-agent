@@ -1,5 +1,6 @@
 from job_seeker.scraper.base import play_wright_scraper
 
+
 class MicrosoftScraper:
     def __init__(self, url):
         self.url = url

@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+
 class Job(BaseModel):
     id: Optional[str] = None
     role: str
@@ -11,6 +12,7 @@ class Job(BaseModel):
     link: str
     date: Optional[datetime] = None
     description: Optional[str] = None
+
 
 class Resume(BaseModel):
     id: Optional[str] = None
@@ -22,6 +24,7 @@ class Resume(BaseModel):
     certifications: List[str]
     publications: List[str]
     summary: Optional[List[str]]
+
 
 class DesiredPosition(BaseModel):
     id: Optional[str] = None
