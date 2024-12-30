@@ -1,7 +1,8 @@
-from typing import Optional, Coroutine
+from typing import Optional, List
 
 from bson import ObjectId
 from loguru import logger
+import numpy as np
 
 from job_seeker.db.model import Job, Resume
 from job_seeker.db.mongo import job_collection, resume_collection
@@ -78,3 +79,49 @@ class ResumeDAO:
         )
 
         return update_result.upserted_id
+
+class ChunkEmbeddingDAO:
+    @classmethod
+    async def add_one(cls, job_id: str, embedding: np.ndarray):
+        from job_seeker.db.qdrant import client
+        from qdrant_client import models
+        from uuid import uuid4
+
+        exists = await client.collection_exists(collection_name="chunk_embedding")
+
+        if not exists:
+            await client.create_collection(
+                collection_name="chunk_embedding",
+                vectors_config=models.VectorParams(
+                    size=embedding.shape[0],
+                    distance=models.Distance.COSINE,
+                    datatype=models.Datatype.FLOAT32,
+                ),
+            )
+
+        result = await client.upsert(
+            collection_name="chunk_embedding",
+            wait=True,
+            points=[
+                models.PointStruct(
+                    id=str(uuid4()),
+                    payload={
+                        "job_id": job_id,
+                    },
+                    vector=embedding,
+                ),
+            ],
+        )
+
+    @classmethod
+    async def search(cls, query: List[float], top_k: int = 10):
+        from job_seeker.db.qdrant import client
+        from qdrant_client import models
+
+        search_result = await client.query_points(
+            collection_name="chunk_embedding",
+            query=query,
+            limit=top_k,
+        )
+
+        return search_result

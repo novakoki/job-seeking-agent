@@ -8,11 +8,12 @@ from loguru import logger
 
 from job_seeker.db.dao import JobDAO
 from job_seeker.db.rabbitmq import consume, publish
+from job_seeker.db.dao import ChunkEmbeddingDAO
 
 
 class BaseEncoder(ABC):
     @abstractmethod
-    def encode(self, text: str) -> AsyncGenerator[np.ndarray, None]:
+    def encode(self, text: str) -> np.ndarray:
         ...
 
     async def serve(self):
@@ -30,6 +31,7 @@ class BaseEncoder(ABC):
         start = time.time()
         embedding = self.encode(chunk)
         logger.info(
-            f"Embedding job_id {job_id} with chunk length {len(chunk)} in {time.time() - start:.2f} seconds"
+            f"Embedding job_id {job_id} with chunk length {len(chunk)} to vector {embedding.shape} in {time.time() - start:.2f} seconds"
         )
         # TODO: save to vector db
+        await ChunkEmbeddingDAO.add_one(job_id, embedding)

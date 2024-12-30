@@ -21,6 +21,9 @@ class SentenceTransformerGPUWorker:
     async def serve(self):
         await self.encoder.serve()
 
+    def execute(self, query):
+        return self.encoder.encode(query)
+
 
 if __name__ == "__main__":
     worker = SentenceTransformerGPUWorker()
