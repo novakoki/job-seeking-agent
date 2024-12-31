@@ -3,16 +3,22 @@ import os
 import asyncio
 
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
 
-async def consume(queue_name, on_message):
-    async def message_callback(message):
-        async with message.process():
-            await on_message(message.body.decode())
+async def consume(queue_name, on_message, loop=None):
+    async def message_callback(message: aio_pika.IncomingMessage):
+        async with message.process(ignore_processed=True):
+            try:
+                await on_message(message.body.decode())
+                await message.ack()
+            except Exception as e:
+                await message.reject()
+                logger.error(f"Error processing message: {e}")
 
-    connection = await aio_pika.connect(os.environ.get("RABBITMQ_URL"))
+    connection = await aio_pika.connect_robust(os.environ.get("RABBITMQ_URL"), loop=loop)
 
     async with connection:
         # Creating a channel

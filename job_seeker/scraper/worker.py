@@ -18,6 +18,7 @@ class LocalPlaywrightScraperWorker:
         self.scrapers: List[PlaywrightScraper] = []
 
     async def serve(self):
+        logger.info("Start serving")
         self.playwright = await async_playwright().start()
         chromium = self.playwright.chromium
         self.browser = await chromium.launch(headless=True)

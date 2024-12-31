@@ -16,9 +16,9 @@ class BaseEncoder(ABC):
     def encode(self, text: str) -> np.ndarray:
         ...
 
-    async def serve(self):
+    async def serve(self, loop=None):
         queue_name = "embedding"
-        await consume(queue_name, self.execute)
+        await consume(queue_name, self.execute, loop)
 
     async def execute(self, msg: str):
         msg = json.loads(msg)

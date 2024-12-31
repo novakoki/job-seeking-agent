@@ -42,7 +42,7 @@ class BaseScraper(ABC):
 
 
 class RequestsScraper(BaseScraper):
-    def __call__(self, url) -> str:
+    def extract(self, url) -> str:
         with requests.get(url) as response:
             return response.text
 

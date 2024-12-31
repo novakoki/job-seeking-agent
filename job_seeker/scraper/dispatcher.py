@@ -1,12 +1,15 @@
 import asyncio
 import json
 
+from loguru import logger
+
 from job_seeker.db.dao import JobDAO
 from job_seeker.db.rabbitmq import publish
 
 
 class LocalPlaywrightScraperDispatcher:
     async def dispatch(self):
+        logger.info("Start dispatching")
         async for change in JobDAO.watch():
             if change["operationType"] == "insert":
                 job_id = str(change["fullDocument"]["_id"])

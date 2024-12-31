@@ -27,11 +27,11 @@ class BaseChunker(ABC):
         if job is None:
             logger.error(f"job_id does not exist: {job_id}")
             return
-        desc = clean_html(desc)
-        await JobDAO.update_desc(job_id, desc)
+        cleaned_html, cleaned_text = clean_html(desc)
+        await JobDAO.update_desc(job_id, cleaned_text)
         start = time.time()
         chunk_lens = []
-        async for chunk in self.extract(desc):
+        async for chunk in self.extract(cleaned_html):
             chunk_lens.append(len(chunk))
             await publish("embedding", json.dumps({"job_id": job_id, "chunk": chunk}))
         logger.info(
@@ -44,5 +44,9 @@ class UnstructuredChunker(BaseChunker):
         from unstructured.partition.html import partition_html
         from unstructured.chunking.title import chunk_by_title
 
-        for chunk in chunk_by_title(partition_html(text=text)):
+        for chunk in chunk_by_title(
+            partition_html(text=text),
+            multipage_sections=False,
+            max_characters=500
+        ):
             yield str(chunk)

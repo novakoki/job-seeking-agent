@@ -27,6 +27,7 @@ class LocalCrawlingDispatcher:
     async def dispatch(self):
         worker_task = asyncio.create_task(self.start_workers())
         # TODO: if there is new crawler, cancel the worker_task and restart it
+        logger.info("Start dispatching")
         while True:
             for config in self.crawler_configs:
                 await publish(config["name"], config["link"])

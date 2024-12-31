@@ -13,13 +13,14 @@ class SentenceTransformerGPUWorker:
         self.encoder = SentenceTransformerEncoder(
             "dunzhang/stella_en_400M_v5",
             model_kwargs={
+                "revision": "eb1ce34a33908596b61c83a88903b5f5f30beaa9",
                 "trust_remote_code": True,
                 "model_kwargs": {"torch_dtype": "float16"},
             },
         )
 
-    async def serve(self):
-        await self.encoder.serve()
+    async def serve(self, loop=None):
+        await self.encoder.serve(loop)
 
     def execute(self, query):
         return self.encoder.encode(query)
