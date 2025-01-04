@@ -11,7 +11,7 @@ from job_seeker.crawler.markdown import (
     extract_markdown_table,
     extract_markdown_multi_table,
 )
-from job_seeker.db.model import Job
+from job_seeker.core.db.model import Job
 from job_seeker.utils.async_utils import async_enumerate
 
 
@@ -60,8 +60,7 @@ class SimplifyGitHubCrawler(BaseCrawler):
             html_link_res = re.search(r"\<a href=\"(.+?)\"\>", application_link)
             if html_link_res:
                 application_link = html_link_res.group(1)
-            if not application_link:
-                continue
+
             application_link = application_link.replace(
                 "utm_source=Simplify&ref=Simplify", ""
             )
@@ -72,16 +71,22 @@ class SimplifyGitHubCrawler(BaseCrawler):
             # process date
             date_index = header.index(self.name_map["date"])
             post_date = row_data[date_index]
-            post_date = dateutil.parser.parse(post_date)
+            try:
+                post_date = dateutil.parser.parse(post_date)
+            except:
+                post_date = last_row_data[date_index]
             if (
                 last_row_data is not None
-                and application_link == last_row_data[link_index]
+                # and application_link == last_row_data[link_index]
                 and post_date > last_row_data[date_index]
             ):
                 post_date = post_date.replace(year=post_date.year - 1)
             row_data[date_index] = post_date
 
             last_row_data = row_data
+
+            if not application_link:
+                continue
 
             job = Job.model_validate(
                 {

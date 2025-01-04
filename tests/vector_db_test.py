@@ -1,7 +1,7 @@
 import json
 
 from job_seeker.embedding.sentence_transformer_embedding import request_embedding
-from job_seeker.db.dao import ChunkEmbeddingDAO, JobDAO
+from job_seeker.core.db.dao import ChunkEmbeddingDAO, JobDAO
 
 
 async def test_request_embedding():

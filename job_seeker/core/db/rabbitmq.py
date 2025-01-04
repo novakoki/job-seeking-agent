@@ -39,7 +39,7 @@ async def consume(queue_name, on_message, loop=None):
 
 
 async def publish(queue_name, message):
-    connection = await aio_pika.connect(os.environ.get("RABBITMQ_URL"))
+    connection = await aio_pika.connect_robust(os.environ.get("RABBITMQ_URL"))
 
     async with connection:
         # Creating channel

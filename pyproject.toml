@@ -9,4 +9,4 @@ classifiers = [
 ]
 
 [tool.setuptools.packages.find]
-exclude = ["tests", "tests.*", "examples"]
+exclude = ["tests", "tests.*", "examples", "frontend"]

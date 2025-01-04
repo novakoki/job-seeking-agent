@@ -5,9 +5,9 @@ import time
 
 from loguru import logger
 
-from job_seeker.db.model import Job
-from job_seeker.db.dao import JobDAO
-from job_seeker.db.rabbitmq import consume
+from job_seeker.core.db.model import Job
+from job_seeker.core.db.dao import JobDAO
+from job_seeker.core.db.rabbitmq import consume
 from pydantic import ValidationError
 
 
@@ -25,6 +25,7 @@ class BaseCrawler(ABC):
         cnt = 0
         futures = []
         async for job in self.extract_jobs(link):
+            job.source = self.__class__.__name__
             futures.append(asyncio.create_task(JobDAO.add_one(job)))
         for future in futures:
             try:

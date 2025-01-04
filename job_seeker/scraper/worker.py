@@ -6,7 +6,7 @@ from loguru import logger
 from playwright.async_api import async_playwright
 
 from job_seeker.scraper.base import PlaywrightScraper
-from job_seeker.db.rabbitmq import publish
+from job_seeker.core.db.rabbitmq import publish
 
 
 class LocalPlaywrightScraperWorker:

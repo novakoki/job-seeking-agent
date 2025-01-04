@@ -12,6 +12,7 @@ class Job(BaseModel):
     link: str
     date: Optional[datetime] = None
     description: Optional[str] = None
+    source: Optional[str] = None
 
 
 class Resume(BaseModel):

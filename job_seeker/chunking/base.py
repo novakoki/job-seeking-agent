@@ -5,8 +5,8 @@ import json
 
 from loguru import logger
 
-from job_seeker.db.dao import JobDAO
-from job_seeker.db.rabbitmq import consume, publish
+from job_seeker.core.db.dao import JobDAO
+from job_seeker.core.db.rabbitmq import consume, publish
 from job_seeker.chunking.clean_html import clean_html
 
 

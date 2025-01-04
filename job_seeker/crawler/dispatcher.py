@@ -7,7 +7,7 @@ from loguru import logger
 import aio_pika
 
 from job_seeker.crawler.base import CrawlerRegistry
-from job_seeker.db.rabbitmq import publish
+from job_seeker.core.db.rabbitmq import publish
 
 load_dotenv()
 

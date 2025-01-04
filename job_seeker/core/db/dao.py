@@ -4,8 +4,8 @@ from bson import ObjectId
 from loguru import logger
 import numpy as np
 
-from job_seeker.db.model import Job, Resume
-from job_seeker.db.mongo import job_collection, resume_collection
+from job_seeker.core.db.model import Job, Resume
+from job_seeker.core.db.mongo import job_collection, resume_collection
 
 
 class JobDAO:
@@ -43,11 +43,15 @@ class JobDAO:
         job = await job_collection.find_one({"_id": ObjectId(job_id)})
 
         if job is not None:
-            job["id"] = str(job["_id"])
-            del job["_id"]
-            return Job(**job)
+            return Job(**job, id=str(job["_id"]))
 
         return None
+    
+    @classmethod
+    async def pagination(cls, skip=0, limit=10):
+        cursor = job_collection.find({}).sort({"date": -1}).skip(skip).limit(limit)
+        jobs = [Job(**job, id=str(job["_id"])) async for job in cursor]
+        return jobs
 
     @classmethod
     async def remove_one(cls, job_id: str):
@@ -83,7 +87,7 @@ class ResumeDAO:
 class ChunkEmbeddingDAO:
     @classmethod
     async def add_one(cls, job_id: str, embedding: np.ndarray):
-        from job_seeker.db.qdrant import client
+        from job_seeker.core.db.qdrant import client
         from qdrant_client import models
         from uuid import uuid4
 
@@ -115,7 +119,7 @@ class ChunkEmbeddingDAO:
 
     @classmethod
     async def search(cls, query: List[float], top_k: int = 10):
-        from job_seeker.db.qdrant import client
+        from job_seeker.core.db.qdrant import client
         from qdrant_client import models
 
         search_result = await client.query_points(
