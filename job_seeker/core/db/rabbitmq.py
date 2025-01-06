@@ -7,6 +7,13 @@ from loguru import logger
 
 load_dotenv()
 
+async def get_queue_size(queue_name, loop=None):
+    connection = await aio_pika.connect_robust(os.environ.get("RABBITMQ_URL"), loop=loop)
+    async with connection:
+        channel = await connection.channel()
+        res = await channel.declare_queue(queue_name, durable=True)
+        print(f"Count Messages: {res.declaration_result.message_count}")
+        return res.declaration_result.message_count
 
 async def consume(queue_name, on_message, loop=None):
     async def message_callback(message: aio_pika.IncomingMessage):

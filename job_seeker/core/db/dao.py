@@ -30,7 +30,7 @@ class JobDAO:
             return None
 
     @classmethod
-    async def update_desc(cls, job_id: str, description: str) -> bool:
+    async def update_desc(cls, job_id: str, description: List[str]) -> bool:
         update_result = await job_collection.update_one(
             filter={"_id": ObjectId(job_id)},
             update={"$set": {"description": description}},
@@ -64,6 +64,11 @@ class JobDAO:
         async with job_collection.watch() as change_stream:
             async for change in change_stream:
                 yield change
+
+    @classmethod
+    async def watch_job_without_desc(cls):
+        async for job in job_collection.find({"desc": None}):
+            yield Job(**job, id=str(job["_id"]))
 
 
 class ResumeDAO:
