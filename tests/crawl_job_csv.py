@@ -28,6 +28,7 @@ async def main():
 
         async for job in crawler.extract_jobs(crawler_config["link"]):
             if "canada" in job.location.lower():
+                job.source = crawler.__class__.__name__
                 results.append(job.model_dump(exclude={"id"}))
     
     pd.DataFrame(results).to_csv("canada_jobs.csv", index=False)
