@@ -17,6 +17,16 @@ dependencies = [
     "pandas==2.2.3",
     "pydantic==2.10.6",
     "python-dateutil==2.9.0.post0",
+    "playwright==1.49.1",
+    "beautifulsoup4==4.12.3",
+    "unstructured==0.16.12",
+    "fastapi[standard]==0.115.6",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "torchaudio==2.5.1",
+    "sentence_transformers==3.3.1",
+    "xformers==0.0.29.post1",
+    "requests==2.32.3",
 ]
 
 [tool.setuptools.packages.find]
