@@ -27,13 +27,14 @@ class BaseChunker(ABC):
         if job is None:
             logger.error(f"job_id does not exist: {job_id}")
             return
-        cleaned_html, cleaned_text = clean_html(desc)
-        await JobDAO.update_desc(job_id, cleaned_text)
         start = time.time()
         chunk_lens = []
-        async for chunk in self.extract(cleaned_html):
+        chunks = []
+        async for chunk in self.extract(desc):
             chunk_lens.append(len(chunk))
+            chunks.append(chunk)
             await publish("embedding", json.dumps({"job_id": job_id, "chunk": chunk}))
+        await JobDAO.update_desc(job_id, chunks)
         logger.info(
             f"Chunk job_id {job_id} with chunk length {chunk_lens} in {time.time() - start:.2f} seconds"
         )

@@ -169,5 +169,3 @@ cython_debug/
 
 *.csv
 *.key
-*.txt
-*.json
